@@ -11,6 +11,9 @@ ARG APP_VERSION=dev
 ENV APP_VERSION=${APP_VERSION} PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN useradd --create-home --uid 10001 appuser
 WORKDIR /app
+# patch OS packages and pip so fixable vulnerabilities do not ship
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir --upgrade pip
 COPY --from=builder /install /usr/local
 COPY app ./app
 USER 10001
