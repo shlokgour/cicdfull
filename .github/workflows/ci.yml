@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: pip install -r requirements-dev.txt
@@ -29,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
       - run: pip install bandit pip-audit
@@ -37,8 +39,9 @@ jobs:
       - name: Dependency audit
         run: pip-audit -r requirements.txt
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
-        env: {GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz | tar xz -C /tmp gitleaks
+          /tmp/gitleaks detect --source . --no-git --redact -v
 
   build-and-push:
     needs: [test, security-scan]
@@ -46,6 +49,7 @@ jobs:
     permissions: {contents: read, packages: write, security-events: write}
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         if: github.event_name == 'push'
@@ -69,7 +73,7 @@ jobs:
           tags: scan-target:ci
           build-args: APP_VERSION=${{ github.sha }}
       - name: Trivy image scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: scan-target:ci
           severity: CRITICAL,HIGH
@@ -95,13 +99,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
       - name: Install kubeconform
         run: |
           curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
           sudo mv kubeconform /usr/local/bin/
       - run: kubeconform -strict -summary -ignore-missing-schemas k8s/base k8s/bluegreen
       - name: Trivy config scan (IaC / Dockerfile)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: .
