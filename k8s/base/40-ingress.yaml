@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: learning-platform
+  namespace: learning-platform
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: learning.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: learning-platform, port: {number: 80}}

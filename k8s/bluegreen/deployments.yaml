@@ -1,0 +1,42 @@
+# Two parallel deployments. The Service selector (slot: blue|green) decides live traffic.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lp-blue
+  namespace: learning-platform
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: lp, slot: blue}}
+  template:
+    metadata: {labels: {app: lp, slot: blue}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: app
+          image: ghcr.io/shlokgour/learning-platform:latest
+          ports: [{containerPort: 8000}]
+          envFrom: [{configMapRef: {name: lp-config}}, {secretRef: {name: lp-secret}}]
+          readinessProbe: {httpGet: {path: /ready, port: 8000}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /health, port: 8000}, periodSeconds: 10}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 256Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lp-green
+  namespace: learning-platform
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: lp, slot: green}}
+  template:
+    metadata: {labels: {app: lp, slot: green}}
+    spec:
+      securityContext: {runAsNonRoot: true, runAsUser: 10001}
+      containers:
+        - name: app
+          image: ghcr.io/shlokgour/learning-platform:latest
+          ports: [{containerPort: 8000}]
+          envFrom: [{configMapRef: {name: lp-config}}, {secretRef: {name: lp-secret}}]
+          readinessProbe: {httpGet: {path: /ready, port: 8000}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /health, port: 8000}, periodSeconds: 10}
+          resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {cpu: 500m, memory: 256Mi}}
